@@ -176,9 +176,12 @@ def parse_scene(text):
     """Parse AI response into structured scene data."""
     result = {"location": "Unknown", "narration": "", "choices": [], "stat_changes": {}}
 
+    # Try multi-line first, then same-line format
     loc = re.search(r"\[LOCATION\]\s*\n(.+?)(?:\n\n|\n\[)", text, re.DOTALL)
+    if not loc:
+        loc = re.search(r"\[LOCATION\]\s*:?\s*(.+?)(?:\n|$)", text)
     if loc:
-        result["location"] = loc.group(1).strip()
+        result["location"] = loc.group(1).strip().strip('*')
 
     narr = re.search(r"\[NARRATION\]\s*\n(.+?)(?:\n\[CHOICES\])", text, re.DOTALL)
     if narr:
@@ -209,8 +212,10 @@ def parse_ending(text):
     result = {"title": "The End", "text": "", "stat_changes": {}}
 
     t = re.search(r"\[ENDING_TITLE\]\s*\n(.+?)(?:\n\n|\n\[)", text, re.DOTALL)
+    if not t:
+        t = re.search(r"\[ENDING_TITLE\]\s*:?\s*(.+?)(?:\n|$)", text)
     if t:
-        result["title"] = t.group(1).strip()
+        result["title"] = t.group(1).strip().strip('*')
 
     tx = re.search(r"\[ENDING_TEXT\]\s*\n(.+?)(?:\n\[|$)", text, re.DOTALL)
     if tx:

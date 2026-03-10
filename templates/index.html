@@ -1286,7 +1286,13 @@ function formatNarration(text) {
 // ─── Render Scene ───
 function renderScene(scene) {
   document.getElementById('scene-label').textContent = `Scene ${state.sceneNum}`;
-  document.getElementById('location-label').textContent = scene.location || 'Unknown';
+  // Use scene location, fall back to last known, then player's chosen location
+  if (scene.location && scene.location !== 'Unknown') {
+    state.lastLocation = scene.location;
+  }
+  document.getElementById('location-label').textContent =
+    (scene.location && scene.location !== 'Unknown') ? scene.location :
+    state.lastLocation || state.playerLocation || 'Exploring...';
 
   // Narration
   document.getElementById('narration-text').innerHTML = formatNarration(scene.narration);
