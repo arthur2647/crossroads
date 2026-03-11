@@ -1438,6 +1438,7 @@ async function generateScene(action) {
     scene_num: state.sceneNum,
     background: state.background ? `${state.background.name}: ${state.background.desc}` : '',
     location: state.playerLocation || '',
+    current_location: state.lastLocation || '',
   };
 
   if (!SERVER_PROVIDER && state.apiKey) {

@@ -304,6 +304,7 @@ def generate():
     scene_num = data.get("scene_num", 1)
     background = data.get("background", "")
     location = data.get("location", "")
+    current_location = data.get("current_location", "")
 
     try:
         if action == "opening":
@@ -340,7 +341,20 @@ def generate():
             if scene_num >= 90:
                 tension = "The story is approaching its conclusion. Begin resolving major threads naturally while maintaining dramatic momentum."
 
-            location_context = f"The story is set in {location}. Keep all scenes grounded in this real location." if location else ""
+            location_context = ""
+            if current_location and location:
+                location_context = (
+                    f"The story began in {location}. The player is currently at: {current_location}. "
+                    f"The story can move to new specific locations naturally — different neighborhoods, "
+                    f"buildings, parks, streets, or even other cities if the story calls for it. "
+                    f"Always provide a SPECIFIC location name in [LOCATION] (e.g. 'Riverside Park, Upper West Side' "
+                    f"not just the city name)."
+                )
+            elif location:
+                location_context = (
+                    f"The story is set in {location}. Move the character to specific locations "
+                    f"within and around this area. Always provide a SPECIFIC location name."
+                )
             messages = [{
                 "role": "user",
                 "content": (
