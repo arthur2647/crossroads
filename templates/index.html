@@ -603,6 +603,33 @@ body::before {
 .ending-text p { margin-bottom: 1rem; }
 .ending-text p:last-child { margin-bottom: 0; }
 
+.roads-not-taken {
+  background: linear-gradient(135deg, rgba(160, 96, 240, 0.08), rgba(0, 200, 240, 0.06));
+  border: 1px solid var(--accent-purple);
+  border-left: 4px solid var(--accent-purple);
+  border-radius: 12px;
+  padding: 1.5rem 2rem;
+  margin-bottom: 2rem;
+}
+.roads-not-taken-title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--accent-purple);
+  margin-bottom: 1rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.roads-not-taken p {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  line-height: 1.8;
+  color: var(--text-dim);
+  margin-bottom: 0.8rem;
+  font-style: italic;
+}
+.roads-not-taken p:last-child { margin-bottom: 0; }
+
 .ending-stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -940,6 +967,11 @@ body::before {
     <div class="ending-title" id="ending-title">The End</div>
 
     <div class="ending-text" id="ending-text"></div>
+
+    <div class="roads-not-taken" id="roads-not-taken" style="display:none;">
+      <div class="roads-not-taken-title">Roads Not Taken</div>
+      <div id="roads-not-taken-content"></div>
+    </div>
 
     <div class="ending-stats" id="ending-stats"></div>
 
@@ -1358,11 +1390,37 @@ async function makeChoice(index, choiceText, scene) {
 }
 
 function shouldEnd() {
-  if (state.sceneNum < 10) return false;
-  if (state.sceneNum >= 25) return true;
-  const chance = (state.sceneNum - 10) * 0.06;
-  const extreme = Object.values(state.stats).filter(v => v <= 10 || v >= 90).length;
-  return Math.random() < (chance + extreme * 0.1);
+  const scene = state.sceneNum;
+  if (scene < 15) return false;
+  if (scene >= 100) return true;
+
+  // Dynamic ending probability based on story progression
+  // Gradual ramp-up: very low chance early, increasing over time
+  let chance = 0;
+
+  if (scene >= 15 && scene < 30) {
+    // Early game: only end if stats are extremely dramatic
+    chance = 0.01;
+  } else if (scene >= 30 && scene < 50) {
+    // Mid game: small but growing chance
+    chance = (scene - 30) * 0.015;
+  } else if (scene >= 50 && scene < 75) {
+    // Late game: moderate chance, story should be wrapping up
+    chance = 0.1 + (scene - 50) * 0.02;
+  } else if (scene >= 75) {
+    // Final stretch: strong push toward conclusion
+    chance = 0.4 + (scene - 75) * 0.03;
+  }
+
+  // Extreme stats make endings more likely (dramatic moments)
+  const extreme = Object.values(state.stats).filter(v => v <= 5 || v >= 95).length;
+  chance += extreme * 0.05;
+
+  // If a stat hits 0 or 100, strong narrative push to end
+  const critical = Object.values(state.stats).filter(v => v <= 0 || v >= 100).length;
+  if (critical > 0 && scene >= 20) chance += 0.2;
+
+  return Math.random() < chance;
 }
 
 // ─── API Call ───
@@ -1427,6 +1485,17 @@ function showEnding(data) {
   const paragraphs = (data.text || 'Your story has concluded.').split(/\n\n+/);
   document.getElementById('ending-text').innerHTML = paragraphs.map(p => `<p>${p}</p>`).join('');
 
+  // Roads Not Taken section
+  const rntContainer = document.getElementById('roads-not-taken');
+  if (data.roads_not_taken && data.roads_not_taken.trim()) {
+    const rntParagraphs = data.roads_not_taken.split(/\n\n+/);
+    document.getElementById('roads-not-taken-content').innerHTML =
+      rntParagraphs.map(p => `<p>${p}</p>`).join('');
+    rntContainer.style.display = 'block';
+  } else {
+    rntContainer.style.display = 'none';
+  }
+
   if (data.stat_changes) {
     applyStatChanges(data.stat_changes);
   }
@@ -1459,6 +1528,11 @@ function showEnding(data) {
 function restartGame() {
   state.history = [];
   state.sceneNum = 1;
+  state.playerLocation = '';
+  state.lastLocation = '';
+  state.playerName = '';
+  state.background = null;
+  state.stats = {};
   selectedBg = -1;
 
   // Reset creation steps

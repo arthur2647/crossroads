@@ -26,18 +26,27 @@ SERVER_GROQ_KEY = os.environ.get("GROQ_API_KEY")
 SYSTEM_PROMPT = """You are the narrator of "Crossroads," an immersive text-based visual novel set in the modern real world. Your writing style is literary, vivid, and emotionally resonant — like a great novel come to life.
 
 RULES:
-1. Generate compelling, grounded-in-reality narratives. No fantasy, sci-fi, or supernatural elements unless the player's choices naturally lead there.
+1. Generate compelling, grounded-in-reality narratives. Keep things realistic but exciting.
 2. Include rich sensory details — sights, sounds, smells, textures.
 3. Create believable, complex NPC characters with distinct voices and motivations.
 4. Always present EXACTLY 4 choices for the player. Choices should be meaningfully different and lead to genuinely different outcomes.
 5. Track and reflect the consequences of previous choices naturally in the narrative.
-6. Incorporate real-world challenges: financial pressures, workplace dynamics, relationship complexity, ethical dilemmas, health concerns, social issues, career decisions.
+6. IMPORTANT — VARY THE GENRE AND TONE across scenes. Do NOT default to business/investing/corporate scenarios. Rotate through diverse themes:
+   - Romance and relationships (meeting someone, heartbreak, rekindling love)
+   - Adventure and exploration (discovering hidden places, spontaneous travel, unexpected journeys)
+   - Mystery and intrigue (strange occurrences, secrets uncovered, puzzles to solve)
+   - Comedy and lighthearted moments (awkward situations, funny encounters, absurd coincidences)
+   - Drama and conflict (family tensions, moral dilemmas, difficult confrontations)
+   - Personal growth (overcoming fears, learning new skills, self-discovery)
+   - Friendship and community (helping strangers, building bonds, neighborhood events)
+   - Danger and suspense (close calls, risky situations, time pressure)
 7. Make the world feel alive — other characters have their own lives, plans, and problems.
 8. When characters speak, format their dialogue with their name on a separate line followed by their words.
+9. Build recurring characters that appear across multiple scenes — give them arcs too.
 
 RESPONSE FORMAT (you MUST follow this exactly):
 [LOCATION]
-<current location name>
+<current specific location name — always include this, be specific like "Rosa's Cafe, Brooklyn" not just "Unknown">
 
 [NARRATION]
 <2-4 paragraphs of vivid narration, including any NPC dialogue. When an NPC speaks, write it as:
@@ -55,14 +64,26 @@ RESPONSE FORMAT (you MUST follow this exactly):
 
 Keep narration between 150-300 words. Make every word count."""
 
-ENDING_PROMPT = """You are concluding a playthrough of "Crossroads." Based on the player's full journey, generate a unique, emotionally resonant ending.
+ENDING_PROMPT = """You are concluding a playthrough of "Crossroads." Based on the player's full journey, generate a unique, emotionally resonant ending that feels like a natural resolution — NOT a cliffhanger.
+
+RULES:
+1. The ending must feel COMPLETE and SATISFYING. Wrap up all major story threads.
+2. Do NOT end on unresolved tension, unanswered questions, or "to be continued" energy.
+3. Show the aftermath — where the character ends up, how their relationships settled, what changed.
+4. Reference specific choices and their consequences throughout the journey.
+5. Include a "Roads Not Taken" section imagining how 2-3 key decisions could have played out differently.
 
 RESPONSE FORMAT:
 [ENDING_TITLE]
 <A poetic 2-5 word title for this ending>
 
 [ENDING_TEXT]
-<3-5 paragraphs wrapping up the story. Reference specific choices and their consequences. Be reflective and meaningful. Show how the character's journey has changed them. End with a final image or thought that lingers.>
+<4-6 paragraphs wrapping up the story smoothly. Start by resolving the current situation naturally. Then zoom out to show the bigger picture — how the character's life has changed. Reference key moments and choices. Show growth and consequences. End with a warm, reflective final image that gives closure — a sunset, a quiet moment, a smile, a door opening to the future. This should feel like the last page of a great novel, not a sudden stop.>
+
+[ROADS_NOT_TAKEN]
+<2-3 short "what if" paragraphs. For each, pick a pivotal choice the player made and imagine what might have happened if they chose differently. Format each as:
+"What if you had [alternative choice]? [1-2 sentences describing the alternate outcome]."
+Keep these speculative and intriguing — show the player how different their story could have been.>
 
 [STAT_CHANGES]
 <final stat adjustments as JSON>
@@ -209,7 +230,7 @@ def parse_scene(text):
 
 def parse_ending(text):
     """Parse ending response."""
-    result = {"title": "The End", "text": "", "stat_changes": {}}
+    result = {"title": "The End", "text": "", "roads_not_taken": "", "stat_changes": {}}
 
     t = re.search(r"\[ENDING_TITLE\]\s*\n(.+?)(?:\n\n|\n\[)", text, re.DOTALL)
     if not t:
@@ -220,6 +241,10 @@ def parse_ending(text):
     tx = re.search(r"\[ENDING_TEXT\]\s*\n(.+?)(?:\n\[|$)", text, re.DOTALL)
     if tx:
         result["text"] = tx.group(1).strip()
+
+    rnt = re.search(r"\[ROADS_NOT_TAKEN\]\s*\n(.+?)(?:\n\[|$)", text, re.DOTALL)
+    if rnt:
+        result["roads_not_taken"] = rnt.group(1).strip()
 
     st = re.search(r"\[STAT_CHANGES\]\s*\n(.+?)(?:\n\[|$)", text, re.DOTALL)
     if st:
@@ -297,10 +322,14 @@ def generate():
             stats_str = ", ".join(f"{k}: {v}" for k, v in stats.items())
 
             tension = ""
-            if scene_num > 12:
-                tension = "The story is building toward a climax — raise the stakes."
-            if scene_num > 18:
-                tension = "This scene should feel like things are reaching a turning point."
+            if scene_num >= 40:
+                tension = "The story is deepening — introduce complications and raise the stakes."
+            if scene_num >= 60:
+                tension = "The story is building toward a climax — raise the stakes significantly."
+            if scene_num >= 80:
+                tension = "This scene should feel like things are reaching a turning point. Start tying threads together."
+            if scene_num >= 90:
+                tension = "The story is approaching its conclusion. Begin resolving major threads naturally while maintaining dramatic momentum."
 
             location_context = f"The story is set in {location}. Keep all scenes grounded in this real location." if location else ""
             messages = [{
