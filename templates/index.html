@@ -1,32 +1,1511 @@
-// Existing code...
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crossroads — An AI-Powered Visual Novel</title>
+<style>
+/* ─── Reset & Base ─── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-const BACKGROUNDS = [...]; // Assuming existing backgrounds
-const THEMES = ['light', 'dark', 'colorful']; // Added THEMES constant
+:root {
+  --bg-deep: #06080f;
+  --bg-dark: #0c1017;
+  --bg-card: #131825;
+  --bg-card-hover: #1a2035;
+  --border: #1e2a42;
+  --border-glow: #2a3a5c;
+  --text: #d4d2cf;
+  --text-bright: #f0eeeb;
+  --text-dim: #6b7280;
+  --accent-cyan: #00c8f0;
+  --accent-magenta: #e040a0;
+  --accent-gold: #f0c030;
+  --accent-green: #40d880;
+  --accent-red: #f04060;
+  --accent-blue: #4080f0;
+  --accent-purple: #a060f0;
+  --font-display: 'Georgia', 'Times New Roman', serif;
+  --font-body: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+}
 
-// Existing code...
+html { font-size: 16px; scroll-behavior: smooth; }
 
-function selectTheme() {
-    document.getElementById('step-theme').style.display = 'block';
+body {
+  font-family: var(--font-body);
+  background: var(--bg-deep);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  line-height: 1.7;
+}
+
+/* ─── Animated Background ─── */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(0, 200, 240, 0.03) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(224, 64, 160, 0.03) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 80%, rgba(160, 96, 240, 0.02) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ─── Screens ─── */
+.screen {
+  display: none;
+  min-height: 100vh;
+  position: relative;
+  z-index: 1;
+}
+.screen.active { display: flex; flex-direction: column; }
+
+/* ─── Title Screen ─── */
+#title-screen {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+}
+
+.title-logo {
+  margin-bottom: 1rem;
+}
+
+.title-logo h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 8vw, 5rem);
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  background: linear-gradient(135deg, var(--accent-cyan), var(--accent-magenta), var(--accent-gold));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: none;
+  animation: titlePulse 4s ease-in-out infinite;
+}
+
+@keyframes titlePulse {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.2); }
+}
+
+.title-subtitle {
+  font-family: var(--font-display);
+  font-size: clamp(0.9rem, 2.5vw, 1.2rem);
+  color: var(--text-dim);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.title-tagline {
+  font-family: var(--font-display);
+  font-style: italic;
+  color: var(--accent-cyan);
+  opacity: 0.7;
+  font-size: clamp(0.85rem, 2vw, 1.05rem);
+  margin-bottom: 3rem;
+}
+
+.menu-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  width: min(320px, 90vw);
+}
+
+.menu-btn {
+  font-family: var(--font-body);
+  font-size: 1.05rem;
+  font-weight: 600;
+  padding: 0.9rem 2rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text-bright);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  letter-spacing: 0.05em;
+}
+.menu-btn:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 20px rgba(0, 200, 240, 0.15);
+  transform: translateY(-2px);
+}
+.menu-btn.primary {
+  background: linear-gradient(135deg, rgba(0,200,240,0.15), rgba(224,64,160,0.1));
+  border-color: var(--accent-cyan);
+}
+
+/* ─── Setup Screen ─── */
+#setup-screen {
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.setup-container {
+  width: min(500px, 92vw);
+}
+
+.setup-title {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  color: var(--accent-cyan);
+  text-align: center;
+  margin-bottom: 2rem;
+  letter-spacing: 0.08em;
+}
+
+.setup-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.setup-card h3 {
+  font-family: var(--font-display);
+  color: var(--text-bright);
+  margin-bottom: 0.5rem;
+}
+
+.setup-card p {
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.input-field {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-bright);
+  outline: none;
+  transition: border-color 0.3s;
+}
+.input-field:focus { border-color: var(--accent-cyan); }
+.input-field::placeholder { color: var(--text-dim); }
+
+.text-input {
+  font-family: var(--font-body);
+  font-size: 1.1rem;
+  padding: 0.8rem 1.2rem;
+  text-align: center;
+  letter-spacing: 0.03em;
+}
+
+/* ─── Character Creation ─── */
+#creation-screen {
+  align-items: center;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+.creation-container { width: min(600px, 92vw); padding: 1rem 0; }
+
+.creation-step { display: none; }
+.creation-step.active { display: block; }
+
+.step-title {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  color: var(--accent-cyan);
+  text-align: center;
+  margin-bottom: 2rem;
+  letter-spacing: 0.05em;
+}
+
+.bg-option {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.2rem 1.5rem;
+  margin-bottom: 0.8rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.bg-option:hover {
+  border-color: var(--accent-cyan);
+  background: var(--bg-card-hover);
+  transform: translateX(4px);
+}
+.bg-option.selected {
+  border-color: var(--accent-gold);
+  background: rgba(240, 192, 48, 0.08);
+  box-shadow: 0 0 15px rgba(240, 192, 48, 0.1);
+}
+.bg-option h4 {
+  font-family: var(--font-display);
+  color: var(--text-bright);
+  font-size: 1.05rem;
+  margin-bottom: 0.3rem;
+}
+.bg-option p {
+  color: var(--text-dim);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.bg-option-number {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  line-height: 24px;
+  text-align: center;
+  border-radius: 50%;
+  background: var(--border);
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-right: 0.6rem;
+  vertical-align: middle;
+}
+
+.bg-option.selected .bg-option-number {
+  background: var(--accent-gold);
+  color: var(--bg-deep);
+}
+
+/* ─── Game Screen ─── */
+#game-screen {
+  min-height: 100vh;
+}
+
+.game-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: rgba(6, 8, 15, 0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 0.6rem 1.5rem;
+}
+
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.4rem;
+}
+
+.scene-label {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--accent-cyan);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.location-label {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+.stats-bar {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.5rem;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.stat-bar-bg {
+  height: 4px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.stat-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.8s ease;
+}
+
+.stat-value {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  margin-top: 1px;
+}
+
+.stat-rep .stat-label { color: var(--accent-gold); }
+.stat-rep .stat-bar-fill { background: var(--accent-gold); }
+.stat-wlth .stat-label { color: var(--accent-green); }
+.stat-wlth .stat-bar-fill { background: var(--accent-green); }
+.stat-rel .stat-label { color: var(--accent-magenta); }
+.stat-rel .stat-bar-fill { background: var(--accent-magenta); }
+.stat-knw .stat-label { color: var(--accent-blue); }
+.stat-knw .stat-bar-fill { background: var(--accent-blue); }
+.stat-hp .stat-label { color: var(--accent-red); }
+.stat-hp .stat-bar-fill { background: var(--accent-red); }
+.stat-mor .stat-label { color: var(--accent-purple); }
+.stat-mor .stat-bar-fill { background: var(--accent-purple); }
+
+/* ─── Narration Area ─── */
+.game-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  max-width: 750px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  width: 100%;
+}
+
+.narration-area {
+  flex: 1;
+  margin-bottom: 2rem;
+}
+
+.narration-text {
+  font-family: var(--font-display);
+  font-size: clamp(1rem, 2.5vw, 1.12rem);
+  line-height: 1.85;
+  color: var(--text);
+}
+
+.narration-text p {
+  margin-bottom: 1.2rem;
+  opacity: 0;
+  transform: translateY(8px);
+  animation: fadeInUp 0.6s ease forwards;
+}
+
+.dialogue-block {
+  margin: 1rem 0;
+  padding: 0.8rem 1rem 0.8rem 1.2rem;
+  border-left: 3px solid var(--accent-gold);
+  background: rgba(240, 192, 48, 0.04);
+  border-radius: 0 8px 8px 0;
+}
+
+.dialogue-block .dialogue-name {
+  color: var(--accent-gold);
+  font-weight: 700;
+  font-style: normal;
+  font-family: var(--font-body);
+  font-size: 0.85em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 0.3rem;
+}
+
+.dialogue-block .dialogue-line {
+  font-style: italic;
+  color: var(--text-bright);
+  font-size: 1.02em;
+  line-height: 1.7;
+  display: block;
+}
+
+/* Alternate colors for different speakers */
+.dialogue-block:nth-of-type(even) {
+  border-left-color: var(--accent-cyan);
+  background: rgba(0, 200, 240, 0.03);
+}
+.dialogue-block:nth-of-type(even) .dialogue-name {
+  color: var(--accent-cyan);
+}
+
+@keyframes fadeInUp {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Choices ─── */
+.choices-area {
+  padding-bottom: 2rem;
+}
+
+.choices-label {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.choices-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.choice-btn {
+  position: relative;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  padding: 1rem 1.2rem 1rem 3rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-card);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.3s ease;
+  opacity: 0;
+  transform: translateX(-15px);
+  animation: slideIn 0.4s ease forwards;
+}
+
+.choice-btn:nth-child(1) { animation-delay: 0.1s; }
+.choice-btn:nth-child(2) { animation-delay: 0.2s; }
+.choice-btn:nth-child(3) { animation-delay: 0.3s; }
+.choice-btn:nth-child(4) { animation-delay: 0.4s; }
+
+@keyframes slideIn {
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.choice-btn::before {
+  content: attr(data-num);
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  line-height: 24px;
+  text-align: center;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: var(--border);
+  color: var(--text-dim);
+  transition: all 0.3s;
+}
+
+.choice-btn:nth-child(1):hover { border-color: var(--accent-green); box-shadow: 0 0 20px rgba(64,216,128,0.1); }
+.choice-btn:nth-child(1):hover::before { background: var(--accent-green); color: var(--bg-deep); }
+.choice-btn:nth-child(2):hover { border-color: var(--accent-gold); box-shadow: 0 0 20px rgba(240,192,48,0.1); }
+.choice-btn:nth-child(2):hover::before { background: var(--accent-gold); color: var(--bg-deep); }
+.choice-btn:nth-child(3):hover { border-color: var(--accent-cyan); box-shadow: 0 0 20px rgba(0,200,240,0.1); }
+.choice-btn:nth-child(3):hover::before { background: var(--accent-cyan); color: var(--bg-deep); }
+.choice-btn:nth-child(4):hover { border-color: var(--accent-magenta); box-shadow: 0 0 20px rgba(224,64,160,0.1); }
+.choice-btn:nth-child(4):hover::before { background: var(--accent-magenta); color: var(--bg-deep); }
+
+.choice-btn:hover {
+  background: var(--bg-card-hover);
+  transform: translateX(4px);
+}
+
+.choice-btn:active {
+  transform: scale(0.98);
+}
+
+/* ─── Loading ─── */
+.loading-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(6, 8, 15, 0.85);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+.loading-overlay.active { display: flex; }
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent-cyan);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-text {
+  margin-top: 1.2rem;
+  font-family: var(--font-display);
+  font-style: italic;
+  color: var(--text-dim);
+  font-size: 0.95rem;
+}
+
+/* ─── Ending Screen ─── */
+#ending-screen {
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+}
+
+.ending-container { width: min(650px, 92vw); }
+
+.ending-crown {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  opacity: 0.8;
+}
+
+.ending-label {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--accent-magenta);
+  margin-bottom: 0.5rem;
+}
+
+.ending-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 5vw, 2.8rem);
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--accent-gold), var(--accent-magenta));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 2rem;
+}
+
+.ending-text {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  line-height: 1.85;
+  color: var(--text);
+  text-align: left;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+}
+.ending-text p { margin-bottom: 1rem; }
+.ending-text p:last-child { margin-bottom: 0; }
+
+.ending-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.8rem;
+  margin-bottom: 2rem;
+}
+
+.ending-stat {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.8rem;
+}
+.ending-stat-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-bottom: 0.2rem;
+}
+.ending-stat-value {
+  font-family: var(--font-mono);
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-bright);
+}
+
+.ending-journey {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  margin-bottom: 2rem;
+}
+
+/* ─── Error Toast ─── */
+.toast {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: var(--accent-red);
+  color: white;
+  padding: 0.8rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  z-index: 200;
+  transition: transform 0.4s ease;
+  max-width: 90vw;
+  text-align: center;
+}
+.toast.visible { transform: translateX(-50%) translateY(0); }
+
+/* ─── Location Tags ─── */
+.location-tag {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--bg-card);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+.location-tag:hover {
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+  background: rgba(0, 200, 240, 0.08);
+}
+
+/* ─── Utility ─── */
+.mt-1 { margin-top: 1rem; }
+.mt-2 { margin-top: 2rem; }
+.text-center { text-align: center; }
+.text-dim { color: var(--text-dim); }
+.text-small { font-size: 0.85rem; }
+
+/* ─── Transition ─── */
+.scene-transition {
+  animation: sceneFade 0.6s ease;
+}
+@keyframes sceneFade {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 600px) {
+  .stats-bar { grid-template-columns: repeat(3, 1fr); gap: 0.3rem 0.5rem; }
+  .game-body { padding: 1.2rem 1rem; }
+  .choice-btn { font-size: 0.9rem; padding: 0.85rem 1rem 0.85rem 2.8rem; }
+  .ending-stats { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ Toast ═══ -->
+<div class="toast" id="toast"></div>
+
+<!-- ═══ Loading Overlay ═══ -->
+<div class="loading-overlay" id="loading">
+  <div class="loading-spinner"></div>
+  <div class="loading-text" id="loading-text">The story unfolds...</div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- TITLE SCREEN                               -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="screen active" id="title-screen">
+  <div class="title-logo">
+    <h1>CROSSROADS</h1>
+  </div>
+  <div class="title-subtitle">An AI-Powered Visual Novel</div>
+  <div class="title-tagline">Every choice matters. Every path is unique. Every ending is yours.</div>
+
+  <div class="menu-buttons">
+    <button class="menu-btn primary" onclick="startNewGame()">New Game</button>
+    <button class="menu-btn" onclick="showAbout()">About</button>
+  </div>
+
+  <div id="about-panel" style="display:none; margin-top:2rem; width:min(500px,90vw);">
+    <div class="setup-card">
+      <h3>About Crossroads</h3>
+      <p>An interactive visual novel where every scene is generated by AI. Navigate career
+         challenges, relationships, moral dilemmas, and the beautiful complexity of modern life.
+         No two playthroughs are ever the same.</p>
+      <p style="margin-top:0.8rem; font-size:0.8rem; color:var(--text-dim);">
+        6 tracked stats &bull; 10-25 scenes per game &bull; Infinite unique endings<br>
+        Built with Claude by Anthropic
+      </p>
+      <button class="menu-btn mt-1" style="width:100%;" onclick="document.getElementById('about-panel').style.display='none'">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SETUP SCREEN (Provider + API Key)          -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="screen" id="setup-screen">
+  <div class="setup-container">
+    <div class="setup-title">Choose Your AI Provider</div>
+
+    <!-- Provider Selection -->
+    <div class="setup-card" id="provider-gemini" onclick="selectProvider('gemini')" style="cursor:pointer; transition: all 0.3s;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3 style="color:var(--accent-green);">Google Gemini</h3>
+        <span style="background:var(--accent-green); color:var(--bg-deep); font-size:0.7rem; font-weight:700; padding:0.2rem 0.6rem; border-radius:20px; letter-spacing:0.05em;">FREE</span>
+      </div>
+      <p>Generous free tier — no credit card needed. Great story quality.</p>
+      <p style="font-size:0.82rem;">
+        <strong style="color:var(--text-bright);">Get a key:</strong>
+        Visit <span style="color:var(--accent-cyan);">aistudio.google.com/apikey</span>
+        &rarr; Create API Key
+      </p>
+    </div>
+
+    <div class="setup-card" id="provider-groq" onclick="selectProvider('groq')" style="cursor:pointer; transition: all 0.3s;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3 style="color:var(--accent-gold);">Groq</h3>
+        <span style="background:var(--accent-gold); color:var(--bg-deep); font-size:0.7rem; font-weight:700; padding:0.2rem 0.6rem; border-radius:20px; letter-spacing:0.05em;">FREE &amp; FAST</span>
+      </div>
+      <p>Blazing fast AI responses. Free tier with generous limits. Works instantly.</p>
+      <p style="font-size:0.82rem;">
+        <strong style="color:var(--text-bright);">Get a key:</strong>
+        Visit <span style="color:var(--accent-cyan);">console.groq.com/keys</span>
+        &rarr; Create API Key
+      </p>
+    </div>
+
+    <div class="setup-card" id="provider-anthropic" onclick="selectProvider('anthropic')" style="cursor:pointer; transition: all 0.3s;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3 style="color:var(--accent-cyan);">Anthropic Claude</h3>
+        <span style="background:var(--border); color:var(--text-dim); font-size:0.7rem; font-weight:700; padding:0.2rem 0.6rem; border-radius:20px; letter-spacing:0.05em;">PAID</span>
+      </div>
+      <p>Premium quality narration. Requires credits (~$0.01/scene).</p>
+      <p style="font-size:0.82rem;">
+        <strong style="color:var(--text-bright);">Get a key:</strong>
+        Visit <span style="color:var(--accent-cyan);">console.anthropic.com</span>
+        &rarr; API Keys &rarr; Create Key
+      </p>
+    </div>
+
+    <!-- Key Input (shown after provider selection) -->
+    <div id="key-input-area" style="display:none;">
+      <div class="setup-card" style="border-color:var(--accent-cyan);">
+        <h3 id="key-input-label">Enter API Key</h3>
+        <p style="font-size:0.85rem; color:var(--text-dim);">Your key stays in your browser and is never stored on any server.</p>
+        <input type="password"
+               class="input-field"
+               id="api-key-input"
+               placeholder=""
+               autocomplete="off"
+               spellcheck="false"
+               style="margin-top:0.5rem;">
+      </div>
+
+      <button class="menu-btn primary" style="width:100%;" onclick="saveApiKey()">
+        Continue
+      </button>
+    </div>
+
+    <button class="menu-btn mt-1 text-dim" style="width:100%;" onclick="skipApiKey()">
+      Skip — Play in Template Mode
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- CHARACTER CREATION                         -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="screen" id="creation-screen">
+  <div class="creation-container">
+
+    <!-- Step 1: Name -->
+    <div class="creation-step active" id="step-name">
+      <div class="step-title">What is your name?</div>
+      <div class="text-center">
+        <input type="text"
+               class="input-field text-input"
+               id="player-name-input"
+               placeholder="Enter your name..."
+               maxlength="30"
+               autofocus>
+        <button class="menu-btn primary mt-2" style="width:min(300px,80vw);" onclick="confirmName()">
+          Continue
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 2: Location -->
+    <div class="creation-step" id="step-location">
+      <div class="step-title">Where does your story begin?</div>
+      <div class="text-center">
+        <p style="color:var(--text-dim); font-size:0.9rem; margin-bottom:1.5rem;">
+          Enter a real city, neighborhood, or place. The AI will build your world around it.
+        </p>
+        <input type="text"
+               class="input-field text-input"
+               id="player-location-input"
+               placeholder="e.g. Tokyo, Brooklyn, Lagos, London..."
+               maxlength="60">
+
+        <div style="margin-top:1.5rem; display:flex; flex-wrap:wrap; gap:0.5rem; justify-content:center;">
+          <button class="location-tag" onclick="pickLocation('New York City')">New York City</button>
+          <button class="location-tag" onclick="pickLocation('London')">London</button>
+          <button class="location-tag" onclick="pickLocation('Tokyo')">Tokyo</button>
+          <button class="location-tag" onclick="pickLocation('Lagos')">Lagos</button>
+          <button class="location-tag" onclick="pickLocation('Dubai')">Dubai</button>
+          <button class="location-tag" onclick="pickLocation('Paris')">Paris</button>
+          <button class="location-tag" onclick="pickLocation('Mumbai')">Mumbai</button>
+          <button class="location-tag" onclick="pickLocation('São Paulo')">São Paulo</button>
+          <button class="location-tag" onclick="pickLocation('Sydney')">Sydney</button>
+          <button class="location-tag" onclick="pickLocation('Berlin')">Berlin</button>
+        </div>
+
+        <button class="menu-btn primary mt-2" style="width:min(300px,80vw);" onclick="confirmLocation()">
+          Continue
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 2.5: Theme Selection -->
+    <div class="creation-step" id="step-theme">
+      <div class="step-title">What's Your Story's Tone?</div>
+      <div id="theme-options"></div>
+      <button class="menu-btn primary mt-2" style="width:100%;" id="confirm-theme-btn" onclick="confirmTheme()" disabled>
+        Continue
+      </button>
+    </div>
+
+    <!-- Step 3: Background -->
+    <div class="creation-step" id="step-background">
+      <div class="step-title">Choose Your Background</div>
+      <div id="bg-options"></div>
+      <button class="menu-btn primary mt-2" style="width:100%;" id="confirm-bg-btn" onclick="confirmBackground()" disabled>
+        Begin Your Story
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- GAME SCREEN                                -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="screen" id="game-screen">
+  <div class="game-header">
+    <div class="header-top">
+      <span class="scene-label" id="scene-label">Scene 1</span>
+      <span class="location-label" id="location-label">Loading...</span>
+    </div>
+    <div class="stats-bar" id="stats-bar">
+      <div class="stat-item stat-rep">
+        <div class="stat-label">Rep</div>
+        <div class="stat-bar-bg"><div class="stat-bar-fill" id="bar-reputation" style="width:50%"></div></div>
+        <div class="stat-value" id="val-reputation">50</div>
+      </div>
+      <div class="stat-item stat-wlth">
+        <div class="stat-label">Wealth</div>
+        <div class="stat-bar-bg"><div class="stat-bar-fill" id="bar-wealth" style="width:50%"></div></div>
+        <div class="stat-value" id="val-wealth">50</div>
+      </div>
+      <div class="stat-item stat-rel">
+        <div class="stat-label">Rel</div>
+        <div class="stat-bar-bg"><div class="stat-bar-fill" id="bar-relationships" style="width:50%"></div></div>
+        <div class="stat-value" id="val-relationships">50</div>
+      </div>
+      <div class="stat-item stat-knw">
+        <div class="stat-label">Know</div>
+        <div class="stat-bar-bg"><div class="stat-bar-fill" id="bar-knowledge" style="width:50%"></div></div>
+        <div class="stat-value" id="val-knowledge">50</div>
+      </div>
+      <div class="stat-item stat-hp">
+        <div class="stat-label">Health</div>
+        <div class="stat-bar-bg"><div class="stat-bar-fill" id="bar-health" style="width:50%"></div></div>
+        <div class="stat-value" id="val-health">50</div>
+      </div>
+      <div class="stat-item stat-mor">
+        <div class="stat-label">Moral</div>
+        <div class="stat-bar-bg"><div class="stat-bar-fill" id="bar-morality" style="width:50%"></div></div>
+        <div class="stat-value" id="val-morality">50</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="game-body scene-transition" id="game-body">
+    <div class="narration-area">
+      <div class="narration-text" id="narration-text"></div>
+    </div>
+    <div class="choices-area">
+      <div class="choices-label">What do you do?</div>
+      <div class="choices-grid" id="choices-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═════���═════════════════════════════════════ -->
+<!-- ENDING SCREEN                              -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="screen" id="ending-screen">
+  <div class="ending-container">
+    <div class="ending-crown">&#9733;</div>
+    <div class="ending-label">Your Story Ends</div>
+    <div class="ending-title" id="ending-title">The End</div>
+
+    <div class="ending-text" id="ending-text"></div>
+
+    <div class="ending-stats" id="ending-stats"></div>
+
+    <div class="ending-journey" id="ending-journey"></div>
+
+    <div class="menu-buttons" style="margin:0 auto;">
+      <button class="menu-btn primary" onclick="restartGame()">Play Again</button>
+      <button class="menu-btn" onclick="goToTitle()">Main Menu</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- JAVASCRIPT                                 -->
+<!-- ═══════════════════════════════════════════ -->
+<script>
+const SERVER_PROVIDER = {{ server_provider | tojson }};
+
+const BACKGROUNDS = [
+  {
+    name: "The Ambitious Graduate",
+    desc: "Fresh out of university with a degree in Business. Big dreams, small savings, and a world of possibilities.",
+    stats: { reputation: 40, wealth: 30, relationships: 50, knowledge: 65, health: 70, morality: 55 }
+  },
+  {
+    name: "The Career Changer",
+    desc: "After 5 years in corporate finance, you quit to pursue your passion. Scary but exhilarating.",
+    stats: { reputation: 55, wealth: 60, relationships: 45, knowledge: 55, health: 50, morality: 50 }
+  },
+  {
+    name: "The Small-Town Dreamer",
+    desc: "You grew up in a town of 3,000 people. Now you're moving to the big city with a suitcase and a plan.",
+    stats: { reputation: 30, wealth: 25, relationships: 65, knowledge: 45, health: 75, morality: 65 }
+  },
+  {
+    name: "The Second Chance",
+    desc: "Life knocked you down — hard. But you're back on your feet, and this time you're playing for keeps.",
+    stats: { reputation: 25, wealth: 20, relationships: 35, knowledge: 50, health: 45, morality: 60 }
+  },
+  {
+    name: "The Prodigy",
+    desc: "Youngest person ever hired at your company. Everyone expects greatness. The pressure is immense.",
+    stats: { reputation: 60, wealth: 45, relationships: 30, knowledge: 75, health: 55, morality: 45 }
+  },
+  {
+    name: "The Inheritor",
+    desc: "A distant relative left you a modest inheritance and a mysterious letter. Time to find out what it means.",
+    stats: { reputation: 45, wealth: 70, relationships: 40, knowledge: 40, health: 60, morality: 50 }
+  }
+];
+
+// ───THEMES ARRAY (NEW)───
+const THEMES = [
+  {
+    name: "Romance",
+    desc: "Love, relationships, emotional connections, and matters of the heart.",
+  },
+  {
+    name: "Adventure",
+    desc: "Excitement, exploration, discovery, and daring challenges.",
+  },
+  {
+    name: "Action",
+    desc: "High stakes, danger, conflict, and intense moments.",
+  },
+  {
+    name: "Mystery",
+    desc: "Secrets, puzzles, investigation, and uncovering the truth.",
+  },
+  {
+    name: "Drama",
+    desc: "Deep emotions, personal struggles, and meaningful consequences.",
+  }
+];
+
+const LOADING_MESSAGES = [
+  "The story unfolds...",
+  "Fate is being written...",
+  "The world responds...",
+  "Consequences take shape...",
+  "Destiny shifts...",
+  "The narrative deepens...",
+  "Your path reveals itself...",
+];
+
+// ─── Game State ───
+let state = {
+  apiKey: localStorage.getItem('crossroads_api_key') || '',
+  provider: localStorage.getItem('crossroads_provider') || 'gemini',
+  playerName: '',
+  playerLocation: '',
+  background: null,
+  selectedTheme: null,
+  stats: {},
+  history: [],
+  sceneNum: 0,
+  lastLocation: '',
+};
+
+// ─── Screen Management ───
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+// ─── Toast ───
+function showToast(msg, duration = 4000) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('visible');
+  setTimeout(() => t.classList.remove('visible'), duration);
+}
+
+// ─── Loading ───
+function showLoading(msg) {
+  const el = document.getElementById('loading');
+  document.getElementById('loading-text').textContent = msg || LOADING_MESSAGES[Math.floor(Math.random() * LOADING_MESSAGES.length)];
+  el.classList.add('active');
+}
+function hideLoading() {
+  document.getElementById('loading').classList.remove('active');
+}
+
+// ─── Title Screen ───
+function showAbout() {
+  const p = document.getElementById('about-panel');
+  p.style.display = p.style.display === 'none' ? 'block' : 'none';
+}
+
+function startNewGame() {
+  if (SERVER_PROVIDER) {
+    state.provider = SERVER_PROVIDER;
+    showScreen('creation-screen');
+    document.getElementById('player-name-input').focus();
+  } else if (state.apiKey && state.provider) {
+    // Returning player with saved key
+    showScreen('creation-screen');
+    document.getElementById('player-name-input').focus();
+  } else {
+    showScreen('setup-screen');
+  }
+}
+
+// ─── Provider & API Key Setup ───
+function selectProvider(provider) {
+  state.provider = provider;
+  localStorage.setItem('crossroads_provider', provider);
+
+  // Visual selection — reset all
+  const providers = ['gemini', 'groq', 'anthropic'];
+  const colors = { gemini: 'var(--accent-green)', groq: 'var(--accent-gold)', anthropic: 'var(--accent-cyan)' };
+  const shadows = { gemini: 'rgba(64,216,128,0.15)', groq: 'rgba(240,192,48,0.15)', anthropic: 'rgba(0,200,240,0.15)' };
+  providers.forEach(p => {
+    document.getElementById('provider-' + p).style.borderColor =
+      p === provider ? colors[p] : 'var(--border)';
+    document.getElementById('provider-' + p).style.boxShadow =
+      p === provider ? '0 0 20px ' + shadows[p] : 'none';
+  });
+
+  // Show key input
+  const area = document.getElementById('key-input-area');
+  area.style.display = 'block';
+
+  const label = document.getElementById('key-input-label');
+  const input = document.getElementById('api-key-input');
+
+  if (provider === 'gemini') {
+    label.textContent = 'Enter Gemini API Key';
+    label.style.color = 'var(--accent-green)';
+    input.placeholder = 'AIza...';
+  } else if (provider === 'groq') {
+    label.textContent = 'Enter Groq API Key';
+    label.style.color = 'var(--accent-gold)';
+    input.placeholder = 'gsk_...';
+  } else {
+    label.textContent = 'Enter Anthropic API Key';
+    label.style.color = 'var(--accent-cyan)';
+    input.placeholder = 'sk-ant-api03-...';
+  }
+  input.focus();
+}
+
+function saveApiKey() {
+  const key = document.getElementById('api-key-input').value.trim();
+  if (key && key.length > 10) {
+    state.apiKey = key;
+    localStorage.setItem('crossroads_api_key', key);
+    localStorage.setItem('crossroads_provider', state.provider);
+    showScreen('creation-screen');
+    document.getElementById('player-name-input').focus();
+  } else {
+    showToast('Please enter a valid API key');
+  }
+}
+
+function skipApiKey() {
+  showToast('Playing in template mode — stories will be limited', 3000);
+  showScreen('creation-screen');
+  document.getElementById('player-name-input').focus();
+}
+
+// ─── Character Creation ───
+function confirmName() {
+  const name = document.getElementById('player-name-input').value.trim();
+  if (!name) {
+    showToast('Please enter a name');
+    return;
+  }
+  state.playerName = name;
+
+  document.getElementById('step-name').classList.remove('active');
+  document.getElementById('step-location').classList.add('active');
+  document.getElementById('player-location-input').focus();
+}
+
+function pickLocation(loc) {
+  document.getElementById('player-location-input').value = loc;
+}
+
+// ─── UPDATED confirmLocation FUNCTION ───
+function confirmLocation() {
+  const location = document.getElementById('player-location-input').value.trim();
+  if (!location) {
+    showToast('Please enter a location');
+    return;
+  }
+  state.playerLocation = location;
+
+  // Build theme options
+  const container = document.getElementById('theme-options');
+  container.innerHTML = '';
+  THEMES.forEach((theme, i) => {
+    const div = document.createElement('div');
+    div.className = 'bg-option';
+    div.innerHTML = `<h4><span class="bg-option-number">${i + 1}</span>${theme.name}</h4><p>${theme.desc}</p>`;
+    div.onclick = () => selectTheme(i, div);
+    container.appendChild(div);
+  });
+
+  document.getElementById('step-location').classList.remove('active');
+  document.getElementById('step-theme').classList.add('active');
+}
+
+// ─── THEME SELECTION FUNCTIONS (NEW) ───
+let selectedTheme = -1;
+
+function selectTheme(index, el) {
+  document.querySelectorAll('#theme-options .bg-option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedTheme = index;
+  document.getElementById('confirm-theme-btn').disabled = false;
 }
 
 function confirmTheme() {
-    const selectedTheme = document.getElementById('theme-select').value;
-    // Logic to apply the theme
-    document.getElementById('step-theme').style.display = 'none';
-    // Trigger next step
+  if (selectedTheme < 0) return;
+  state.selectedTheme = THEMES[selectedTheme];
+
+  // Build background options
+  const container = document.getElementById('bg-options');
+  container.innerHTML = '';
+  BACKGROUNDS.forEach((bg, i) => {
+    const div = document.createElement('div');
+    div.className = 'bg-option';
+    div.innerHTML = `<h4><span class="bg-option-number">${i + 1}</span>${bg.name}</h4><p>${bg.desc}</p>`;
+    div.onclick = () => selectBackground(i, div);
+    container.appendChild(div);
+  });
+
+  document.getElementById('step-theme').classList.remove('active');
+  document.getElementById('step-background').classList.add('active');
 }
 
-// Existing confirmLocation function...
-function confirmLocation() {
-    // Existing logic...
-
-    // Show theme selection after confirming location
-    selectTheme();
+let selectedBg = -1;
+function selectBackground(index, el) {
+  document.querySelectorAll('.bg-option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedBg = index;
+  document.getElementById('confirm-bg-btn').disabled = false;
 }
 
+function confirmBackground() {
+  if (selectedBg < 0) return;
+  state.background = BACKGROUNDS[selectedBg];
+  state.stats = { ...state.background.stats };
+  state.history = [];
+  state.sceneNum = 1;
+
+  showScreen('game-screen');
+  updateStats();
+  generateScene('opening');
+}
+
+// ─── Stats ───
+function updateStats() {
+  const statKeys = ['reputation', 'wealth', 'relationships', 'knowledge', 'health', 'morality'];
+  statKeys.forEach(key => {
+    const val = Math.max(0, Math.min(100, state.stats[key] || 50));
+    state.stats[key] = val;
+    const bar = document.getElementById('bar-' + key);
+    const valEl = document.getElementById('val-' + key);
+    if (bar) bar.style.width = val + '%';
+    if (valEl) valEl.textContent = val;
+  });
+}
+
+function applyStatChanges(changes) {
+  if (!changes || typeof changes !== 'object') return;
+  Object.entries(changes).forEach(([key, val]) => {
+    if (key in state.stats) {
+      state.stats[key] = Math.max(0, Math.min(100, state.stats[key] + parseInt(val)));
+    }
+  });
+  updateStats();
+}
+
+function applyFallbackStats(choiceIndex) {
+  const effects = [
+    { knowledge: 5, reputation: 3, health: -2 },
+    { relationships: 5, morality: 3, wealth: -2 },
+    { health: 3, knowledge: 3, reputation: -2 },
+    { morality: 5, relationships: 3, reputation: -3 },
+  ];
+  applyStatChanges(effects[choiceIndex % 4]);
+}
+
+// ─── Format Narration ───
+function formatNarration(text) {
+  if (!text) return '';
+
+  const lines = text.split('\n');
+  let html = '';
+  let blockIndex = 0;
+  let currentParagraph = [];
+
+  function flushParagraph() {
+    if (currentParagraph.length > 0) {
+      const delay = blockIndex * 0.12;
+      let paraText = currentParagraph.join(' ').trim();
+      paraText = paraText.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      html += `<p style="animation-delay:${delay}s">${paraText}</p>`;
+      currentParagraph = [];
+      blockIndex++;
+    }
+  }
+
+  lines.forEach(line => {
+    const trimmed = line.trim();
+
+    if (!trimmed) {
+      flushParagraph();
+      return;
+    }
+
+    let dialogueMatch = null;
+
+    dialogueMatch = trimmed.match(/^\*\*(.+?)\*\*\s*:\s*[""]?(.+?)[""]?\s*$/);
+    if (!dialogueMatch) {
+      dialogueMatch = trimmed.match(/^([A-Z][a-zA-Z\s\.'\\-]{0,25}):\s*[""](.+?)[""]?\s*$/);
+    }
+
+    if (dialogueMatch) {
+      flushParagraph();
+      const name = dialogueMatch[1].replace(/\*\*/g, '').trim();
+      let dialogue = dialogueMatch[2].replace(/\*\*/g, '').trim();
+      dialogue = dialogue.replace(/^[""]|[""]$/g, '').trim();
+      const delay = blockIndex * 0.12;
+      html += `<div class="dialogue-block" style="animation-delay:${delay}s; opacity:0; transform:translateY(8px); animation: fadeInUp 0.6s ease forwards;">
+        <span class="dialogue-name">${name}</span>
+        <span class="dialogue-line">"${dialogue}"</span>
+      </div>`;
+      blockIndex++;
+      return;
+    }
+
+    currentParagraph.push(trimmed);
+  });
+
+  flushParagraph();
+  return html;
+}
+
+// ─── Render Scene ───
+function renderScene(scene) {
+  document.getElementById('scene-label').textContent = `Scene ${state.sceneNum}`;
+  if (scene.location && scene.location !== 'Unknown') {
+    state.lastLocation = scene.location;
+  }
+  document.getElementById('location-label').textContent =
+    (scene.location && scene.location !== 'Unknown') ? scene.location :
+    state.lastLocation || state.playerLocation || 'Exploring...';
+
+  document.getElementById('narration-text').innerHTML = formatNarration(scene.narration);
+
+  const grid = document.getElementById('choices-grid');
+  grid.innerHTML = '';
+  (scene.choices || []).forEach((choice, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.setAttribute('data-num', i + 1);
+    btn.textContent = choice;
+    btn.onclick = () => makeChoice(i, choice, scene);
+    grid.appendChild(btn);
+  });
+
+  if (scene.stat_changes && Object.keys(scene.stat_changes).length > 0) {
+    applyStatChanges(scene.stat_changes);
+  }
+
+  const body = document.getElementById('game-body');
+  body.classList.remove('scene-transition');
+  void body.offsetWidth;
+  body.classList.add('scene-transition');
+
+  hideLoading();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ─── Make Choice ───
+async function makeChoice(index, choiceText, scene) {
+  document.querySelectorAll('.choice-btn').forEach(b => {
+    b.disabled = true;
+    b.style.opacity = '0.4';
+  });
+
+  state.history.push({
+    scene: state.sceneNum,
+    location: scene.location,
+    choice: choiceText
+  });
+
+  if (!scene.stat_changes || Object.keys(scene.stat_changes).length === 0) {
+    applyFallbackStats(index);
+  }
+
+  state.sceneNum++;
+
+  if (shouldEnd()) {
+    showLoading("Your story reaches its conclusion...");
+    await generateScene('ending');
+    return;
+  }
+
+  showLoading();
+  await generateScene('scene');
+}
+
+function shouldEnd() {
+  if (state.sceneNum < 10) return false;
+  if (state.sceneNum >= 25) return true;
+  const chance = (state.sceneNum - 10) * 0.06;
+  const extreme = Object.values(state.stats).filter(v => v <= 10 || v >= 90).length;
+  return Math.random() < (chance + extreme * 0.1);
+}
+
+// ─── API Call ───
+async function generateScene(action) {
+  showLoading(action === 'opening' ? 'Your story begins...' :
+              action === 'ending' ? 'Your story reaches its conclusion...' : undefined);
+
+  const payload = {
+    action,
+    provider: state.provider,
+    player_name: state.playerName,
+    stats: state.stats,
+    history: state.history,
+    scene_num: state.sceneNum,
+    background: state.background ? `${state.background.name}: ${state.background.desc}` : '',
+    location: state.playerLocation || '',
+  };
+
+  if (!SERVER_PROVIDER && state.apiKey) {
+    payload.api_key = state.apiKey;
+  }
+
+  try {
+    const resp = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json();
+      throw new Error(err.error || 'Server error');
+    }
+
+    const data = await resp.json();
+
+    if (action === 'ending') {
+      showEnding(data);
+    } else {
+      renderScene(data);
+    }
+  } catch (err) {
+    hideLoading();
+    showToast('Error: ' + err.message);
+    console.error(err);
+
+    document.querySelectorAll('.choice-btn').forEach(b => {
+      b.disabled = false;
+      b.style.opacity = '1';
+    });
+  }
+}
+
+// ─── Ending ───
+function showEnding(data) {
+  hideLoading();
+
+  document.getElementById('ending-title').textContent = data.title || 'The End';
+
+  const paragraphs = (data.text || 'Your story has concluded.').split(/\n\n+/);
+  document.getElementById('ending-text').innerHTML = paragraphs.map(p => `<p>${p}</p>`).join('');
+
+  if (data.stat_changes) {
+    applyStatChanges(data.stat_changes);
+  }
+
+  const statsHtml = Object.entries(state.stats).map(([key, val]) => {
+    const colors = {
+      reputation: 'var(--accent-gold)', wealth: 'var(--accent-green)',
+      relationships: 'var(--accent-magenta)', knowledge: 'var(--accent-blue)',
+      health: 'var(--accent-red)', morality: 'var(--accent-purple)'
+    };
+    const labels = {
+      reputation: 'Reputation', wealth: 'Wealth', relationships: 'Relationships',
+      knowledge: 'Knowledge', health: 'Health', morality: 'Morality'
+    };
+    return `<div class="ending-stat">
+      <div class="ending-stat-label" style="color:${colors[key]}">${labels[key]}</div>
+      <div class="ending-stat-value">${val}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('ending-stats').innerHTML = statsHtml;
+
+  document.getElementById('ending-journey').textContent =
+    `${state.sceneNum} scenes played · ${state.history.length} choices made`;
+
+  showScreen('ending-screen');
+}
+
+// ─── UPDATED restartGame FUNCTION ───
 function restartGame() {
-    state.lastLocation = null; // Clear the last location
-    // Existing restart game logic...
-}
+  state.history = [];
+  state.sceneNum = 1;
+  state.lastLocation = '';  // CLEAR LOCATION
+  state.selectedTheme = null;  // CLEAR THEME
+  selectedBg = -1;
+  selectedTheme = -1;
 
-// Existing code...
+  document.getElementById('step-name').classList.add('active');
+  document.getElementById('step-location').classList.remove('active');
+  document.getElementById('step-theme').classList.remove('active');
+  document.getElementById('step-background').classList.remove('active');
+  document.getElementById('player-name-input').value = '';
+  document.getElementById('player-location-input').value = '';
+  document.getElementById('confirm-bg-btn').disabled = true;
+  document
