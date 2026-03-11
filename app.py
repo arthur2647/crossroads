@@ -211,7 +211,10 @@ def parse_scene(text):
     if not narr:
         narr = re.search(r"\[NARRATION\]\s*:?\s*\n?(.+?)(?:\n\[|$)", text, re.DOTALL)
     if narr:
-        result["narration"] = narr.group(1).strip()
+        narration = narr.group(1).strip()
+        # Strip any leaked JSON stat blocks
+        narration = re.sub(r'\{["\s]*\w+["\s]*:.*?\}', '', narration).strip()
+        result["narration"] = narration
 
     ch = re.search(r"\[CHOICES\]\s*\n(.+?)(?:\n\[|$)", text, re.DOTALL)
     if not ch:
@@ -228,9 +231,12 @@ def parse_scene(text):
         except (json.JSONDecodeError, ValueError):
             pass
 
-    # Fallback: if narration is empty, use the raw text (strip tags)
+    # Fallback: if narration is empty, use the raw text (strip tags and JSON)
     if not result["narration"] and text.strip():
-        fallback = re.sub(r'\[.*?\]', '', text).strip()
+        fallback = re.sub(r'\[.*?\]', '', text)
+        fallback = re.sub(r'\{[^}]*\}', '', fallback)
+        fallback = re.sub(r'\d+\.\s*.+', '', fallback)
+        fallback = fallback.strip()
         if fallback:
             result["narration"] = fallback
 
