@@ -202,6 +202,33 @@ def clean_narration(text):
     return text.strip()
 
 
+# Common city names to detect generic locations
+GENERIC_CITIES = {
+    "new york", "new york city", "nyc", "london", "tokyo", "lagos", "dubai",
+    "paris", "mumbai", "são paulo", "sao paulo", "sydney", "berlin",
+    "los angeles", "chicago", "toronto", "singapore", "hong kong",
+    "san francisco", "seattle", "boston", "miami", "amsterdam", "rome",
+    "barcelona", "istanbul", "cairo", "nairobi", "bangkok", "seoul",
+    "shanghai", "beijing", "moscow", "rio de janeiro", "buenos aires",
+}
+
+
+def extract_location_from_narration(narration):
+    """Try to find a specific place name from the narration text."""
+    # Look for place patterns like "at the ___", "inside ___", "in the ___", "at ___'s"
+    patterns = [
+        r"(?:walked into|entered|stepped into|arrived at|inside|at)\s+(?:the\s+)?([A-Z][A-Za-z'\s]+(?:Cafe|Café|Restaurant|Bar|Hotel|Shop|Store|Market|Museum|Gallery|Park|Station|Terminal|Hospital|Library|Office|Tower|Plaza|Square|Club|Gym|Studio|Theater|Theatre|Church|Mosque|Temple|Garden|Beach|Harbor|Harbour|Port|Airport|Mall|Center|Centre))",
+        r"(?:at|inside|into)\s+([A-Z][A-Za-z']+(?:'s)?(?:\s+[A-Z][A-Za-z']+)*)",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, narration)
+        if match:
+            place = match.group(1).strip()
+            if len(place) > 3 and place.lower() not in GENERIC_CITIES:
+                return place
+    return None
+
+
 def parse_scene(text):
     """Parse AI response into structured scene data."""
     result = {"location": "Unknown", "narration": "", "choices": [], "stat_changes": {}}
@@ -256,6 +283,12 @@ def parse_scene(text):
         fallback = fallback.strip()
         if fallback:
             result["narration"] = fallback
+
+    # If location is just a generic city name, try to extract a specific place from narration
+    if result["narration"] and result["location"].lower() in GENERIC_CITIES:
+        specific = extract_location_from_narration(result["narration"])
+        if specific:
+            result["location"] = f"{specific}, {result['location']}"
 
     while len(result["choices"]) < 4:
         result["choices"].append("Consider your options carefully")
