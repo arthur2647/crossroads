@@ -46,7 +46,7 @@ RULES:
 
 RESPONSE FORMAT (you MUST follow this exactly):
 [LOCATION]
-<current specific location name — always include this, be specific like "Rosa's Cafe, Brooklyn" not just "Unknown">
+<IMPORTANT: This MUST be a specific place name that changes as the story moves. NEVER just write the city name. Examples: "Al Fahidi Historical District, Dubai", "The Spice Souk, Deira", "Jumeirah Beach Promenade", "Rosa's Cafe, Brooklyn Heights", "Platform 9, King's Cross Station". Each scene should have a DIFFERENT specific location reflecting where the action is happening.>
 
 [NARRATION]
 <2-4 paragraphs of vivid narration, including any NPC dialogue. When an NPC speaks, write it as:
