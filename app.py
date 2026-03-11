@@ -202,7 +202,10 @@ def parse_scene(text):
     if not loc:
         loc = re.search(r"\[LOCATION\]\s*:?\s*(.+?)(?:\n|$)", text)
     if loc:
-        result["location"] = loc.group(1).strip().strip('*')
+        location = loc.group(1).strip().strip('*')
+        location = re.sub(r'\[.*?\].*', '', location).strip()
+        if location:
+            result["location"] = location
 
     narr = re.search(r"\[NARRATION\]\s*\n(.+?)(?:\n\[CHOICES\])", text, re.DOTALL)
     if narr:
@@ -236,9 +239,15 @@ def parse_ending(text):
     if not t:
         t = re.search(r"\[ENDING_TITLE\]\s*:?\s*(.+?)(?:\n|$)", text)
     if t:
-        result["title"] = t.group(1).strip().strip('*')
+        title = t.group(1).strip().strip('*')
+        # Strip any leaked tags from the title
+        title = re.sub(r'\[.*?\].*', '', title).strip()
+        if title:
+            result["title"] = title
 
     tx = re.search(r"\[ENDING_TEXT\]\s*\n(.+?)(?:\n\[|$)", text, re.DOTALL)
+    if not tx:
+        tx = re.search(r"\[ENDING_TEXT\]\s*:?\s*(.+?)(?:\n\[|$)", text, re.DOTALL)
     if tx:
         result["text"] = tx.group(1).strip()
 
