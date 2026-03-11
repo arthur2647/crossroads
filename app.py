@@ -208,10 +208,14 @@ def parse_scene(text):
             result["location"] = location
 
     narr = re.search(r"\[NARRATION\]\s*\n(.+?)(?:\n\[CHOICES\])", text, re.DOTALL)
+    if not narr:
+        narr = re.search(r"\[NARRATION\]\s*:?\s*\n?(.+?)(?:\n\[|$)", text, re.DOTALL)
     if narr:
         result["narration"] = narr.group(1).strip()
 
     ch = re.search(r"\[CHOICES\]\s*\n(.+?)(?:\n\[|$)", text, re.DOTALL)
+    if not ch:
+        ch = re.search(r"\[CHOICES\]\s*:?\s*\n?(.+?)(?:\n\[|$)", text, re.DOTALL)
     if ch:
         choices = re.findall(r"\d+\.\s*(.+?)(?:\n|$)", ch.group(1).strip())
         result["choices"] = [c.strip() for c in choices if c.strip()]
@@ -223,6 +227,12 @@ def parse_scene(text):
             result["stat_changes"] = json.loads(s)
         except (json.JSONDecodeError, ValueError):
             pass
+
+    # Fallback: if narration is empty, use the raw text (strip tags)
+    if not result["narration"] and text.strip():
+        fallback = re.sub(r'\[.*?\]', '', text).strip()
+        if fallback:
+            result["narration"] = fallback
 
     while len(result["choices"]) < 4:
         result["choices"].append("Consider your options carefully")
