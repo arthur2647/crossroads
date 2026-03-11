@@ -298,15 +298,22 @@ def parse_scene(text):
             result["narration"] = '\n'.join(lines[1:]).strip()
 
         # Case 2: Location is inline at the START of first line (e.g. "Café Name, Area  Dima walked...")
-        # Detect: "ProperNoun words, ProperNoun words" followed by a name/sentence start
+        # Look for a location followed by a sentence-starting pattern
         else:
+            # Sentence starters: common words that begin narration sentences
+            sentence_starters = (
+                r'(?:As |The |A |An |You |He |She |They |It |In |On |At |'
+                r'With |After |Before |While |During |Suddenly |Meanwhile |'
+                r'Outside |Inside |Across |Behind |Beyond |Through |Under |'
+                r'[A-ZÀ-Ü][a-zà-ü]+(?:ed |ing |ly |s ) )'  # verb/adverb patterns
+            )
             inline = re.match(
-                r'^([A-ZÀ-Ü][A-Za-zÀ-ü\' ]+,\s*[A-ZÀ-Ü][A-Za-zÀ-ü\' ]+)\s+([A-ZÀ-Ü][a-zà-ü])',
+                r'^(.+?,\s*[A-ZÀ-Ü][A-Za-zÀ-ü\' ]+?)\s+(' + sentence_starters + r')',
                 first_line
             )
             if inline:
                 loc_part = inline.group(1).strip()
-                if len(loc_part) < 60:
+                if len(loc_part) < 80 and loc_part[0].isupper():
                     result["location"] = loc_part
                     # Remove the location from the narration text
                     rest = first_line[len(loc_part):].strip()
