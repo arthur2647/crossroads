@@ -284,7 +284,19 @@ def parse_scene(text):
         if fallback:
             result["narration"] = fallback
 
-    # If location is just a generic city name, try to extract a specific place from narration
+    # Check if the first line of narration is actually a location (short, has comma/caps, no verbs)
+    if result["narration"]:
+        lines = result["narration"].split('\n')
+        first_line = lines[0].strip().strip('*')
+        # If first line is short, contains a comma, and looks like a place name — use it as location
+        if (len(first_line) < 80 and ',' in first_line and
+            not any(w in first_line.lower() for w in ['the ', 'and ', 'but ', 'was ', 'is ', 'are ', 'you ']) and
+            first_line[0].isupper()):
+            result["location"] = first_line
+            # Remove the location line from narration
+            result["narration"] = '\n'.join(lines[1:]).strip()
+
+    # If location is still a generic city name, try to extract a specific place from narration
     if result["narration"] and result["location"].lower() in GENERIC_CITIES:
         specific = extract_location_from_narration(result["narration"])
         if specific:
