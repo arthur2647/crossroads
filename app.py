@@ -21,7 +21,13 @@ app = Flask(__name__)
 
 SERVER_ANTHROPIC_KEY = os.environ.get("ANTHROPIC_API_KEY")
 SERVER_GEMINI_KEY = os.environ.get("GEMINI_API_KEY")
-SERVER_GROQ_KEY = os.environ.get("GROQ_API_KEY")
+# Support multiple Groq keys for automatic failover
+GROQ_KEYS = [k for k in [
+    os.environ.get("GROQ_API_KEY"),
+    os.environ.get("GROQ_API_KEY_1"),
+    os.environ.get("GROQ_API_KEY_2"),
+] if k]
+SERVER_GROQ_KEY = GROQ_KEYS[0] if GROQ_KEYS else None
 
 SYSTEM_PROMPT = """You are the narrator of "Crossroads," an immersive text-based visual novel set in the modern real world. Your writing style is literary, vivid, and emotionally resonant — like a great novel come to life.
 
@@ -153,8 +159,8 @@ def call_gemini(messages, system_prompt, api_key):
     )
 
 
-def call_groq(messages, system_prompt, api_key):
-    """Call Groq API — free, fast, OpenAI-compatible."""
+def _groq_request(messages, system_prompt, api_key):
+    """Make a single Groq API request. Returns (success, result_or_error, is_rate_limit)."""
     import requests as req
 
     url = "https://api.groq.com/openai/v1/chat/completions"
@@ -176,9 +182,30 @@ def call_groq(messages, system_prompt, api_key):
 
     if resp.status_code == 200:
         data = resp.json()
-        return data["choices"][0]["message"]["content"]
+        return True, data["choices"][0]["message"]["content"], False
 
-    raise Exception(f"Groq API error ({resp.status_code}): {resp.text[:300]}")
+    is_rate_limit = resp.status_code == 429 or "rate_limit" in resp.text.lower()
+    return False, resp.text[:300], is_rate_limit
+
+
+def call_groq(messages, system_prompt, api_key):
+    """Call Groq API with automatic key failover."""
+    # Build list of keys to try: provided key first, then all server keys
+    keys_to_try = [api_key]
+    for k in GROQ_KEYS:
+        if k != api_key and k not in keys_to_try:
+            keys_to_try.append(k)
+
+    last_error = ""
+    for key in keys_to_try:
+        success, result, is_rate_limit = _groq_request(messages, system_prompt, key)
+        if success:
+            return result
+        last_error = result
+        if not is_rate_limit:
+            break  # Only retry with next key on rate limits
+
+    raise Exception(f"Groq API error: {last_error}")
 
 
 def call_ai(messages, system_prompt, provider, api_key):
