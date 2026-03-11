@@ -327,13 +327,9 @@ def parse_scene(text):
         # Case 2: Location is inline at the START of first line (e.g. "Café Name, Area  Dima walked...")
         # Look for a location followed by a sentence-starting pattern
         else:
-            # Sentence starters: common words that begin narration sentences
-            sentence_starters = (
-                r'(?:As |The |A |An |You |He |She |They |It |In |On |At |'
-                r'With |After |Before |While |During |Suddenly |Meanwhile |'
-                r'Outside |Inside |Across |Behind |Beyond |Through |Under |'
-                r'[A-ZÀ-Ü][a-zà-ü]+(?:ed |ing |ly |s ) )'  # verb/adverb patterns
-            )
+            # Sentence starters: any capitalized word followed by a lowercase word
+            # This catches names ("Arthur sat"), pronouns ("He walked"), articles ("The room"), etc.
+            sentence_starters = r'(?:[A-ZÀ-Ü][a-zà-ü]+ [a-z])'
             inline = re.match(
                 r'^(.+?,\s*[A-ZÀ-Ü][A-Za-zÀ-ü\' ]+?)\s+(' + sentence_starters + r')',
                 first_line
