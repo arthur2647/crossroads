@@ -284,17 +284,34 @@ def parse_scene(text):
         if fallback:
             result["narration"] = fallback
 
-    # Check if the first line of narration is actually a location (short, has comma/caps, no verbs)
+    # Check if narration starts with an inline location
     if result["narration"]:
-        lines = result["narration"].split('\n')
+        narr = result["narration"]
+        lines = narr.split('\n')
         first_line = lines[0].strip().strip('*')
-        # If first line is short, contains a comma, and looks like a place name — use it as location
+
+        # Case 1: First line IS the location (short line with comma, no sentence structure)
         if (len(first_line) < 80 and ',' in first_line and
-            not any(w in first_line.lower() for w in ['the ', 'and ', 'but ', 'was ', 'is ', 'are ', 'you ']) and
+            not any(w in first_line.lower() for w in ['the ', 'and ', 'but ', 'was ', 'is ', 'are ', 'you ', 'he ', 'she ', 'they ']) and
             first_line[0].isupper()):
             result["location"] = first_line
-            # Remove the location line from narration
             result["narration"] = '\n'.join(lines[1:]).strip()
+
+        # Case 2: Location is inline at the START of first line (e.g. "Café Name, Area  Dima walked...")
+        # Detect: "ProperNoun words, ProperNoun words" followed by a name/sentence start
+        else:
+            inline = re.match(
+                r'^([A-ZÀ-Ü][A-Za-zÀ-ü\' ]+,\s*[A-ZÀ-Ü][A-Za-zÀ-ü\' ]+)\s+([A-ZÀ-Ü][a-zà-ü])',
+                first_line
+            )
+            if inline:
+                loc_part = inline.group(1).strip()
+                if len(loc_part) < 60:
+                    result["location"] = loc_part
+                    # Remove the location from the narration text
+                    rest = first_line[len(loc_part):].strip()
+                    lines[0] = rest
+                    result["narration"] = '\n'.join(lines).strip()
 
     # If location is still a generic city name, try to extract a specific place from narration
     if result["narration"] and result["location"].lower() in GENERIC_CITIES:
