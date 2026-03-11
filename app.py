@@ -356,57 +356,70 @@ def parse_scene(text):
     return result
 
 
+def clean_ending_text(text):
+    """Remove all formatting artifacts from ending text."""
+    # Remove [TAGS]
+    text = re.sub(r'\[.*?\]', '', text)
+    # Remove JSON blocks
+    text = re.sub(r'\{[^}]*\}', '', text)
+    # Remove ```json ... ``` code blocks
+    text = re.sub(r'```\w*\s*.*?```', '', text, flags=re.DOTALL)
+    # Remove **Stat Changes**, **Stats**, etc. headers and everything after
+    text = re.sub(r'\*\*(?:Stat\s*Changes?|Stats?|Final\s*Stats?)\*\*.*', '', text, flags=re.DOTALL | re.IGNORECASE)
+    # Remove markdown bold markers but keep the text
+    text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)
+    # Remove orphaned asterisks
+    text = re.sub(r'(?<!\w)\*{1,2}(?!\w)', '', text)
+    # Clean up extra whitespace
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    return text.strip()
+
+
 def parse_ending(text):
     """Parse ending response."""
     result = {"title": "The End", "text": "", "roads_not_taken": "", "stat_changes": {}}
 
-    # Try to extract title
-    t = re.search(r"\[ENDING_TITLE\]\s*\n(.+?)(?:\n\n|\n\[)", text, re.DOTALL)
-    if not t:
-        t = re.search(r"\[ENDING_TITLE\]\s*:?\s*(.+?)(?:\n|$)", text)
-    if t:
-        title = t.group(1).strip().strip('*')
-        title = re.sub(r'\[.*?\].*', '', title).strip()
-        if title:
-            result["title"] = title
-
-    # Try to extract ending text
-    tx = re.search(r"\[ENDING_TEXT\]\s*\n(.+?)(?=\n\s*\[|$)", text, re.DOTALL)
-    if not tx:
-        tx = re.search(r"\[ENDING_TEXT\]\s*:?\s*(.+?)(?=\n\s*\[|$)", text, re.DOTALL)
-    if tx:
-        ending_text = tx.group(1).strip()
-        # Clean leaked JSON and tags
-        ending_text = re.sub(r'\{["\s]*\w+["\s]*:.*?\}', '', ending_text)
-        ending_text = re.sub(r'\[.*?\]', '', ending_text)
-        result["text"] = ending_text.strip()
-
-    # Try to extract roads not taken
-    rnt = re.search(r"\[ROADS_NOT_TAKEN\]\s*:?\s*\n?(.+?)(?=\n\s*\[|$)", text, re.DOTALL)
-    if rnt:
-        result["roads_not_taken"] = rnt.group(1).strip()
-
-    # Try to extract stat changes
-    st = re.search(r"\[STAT_CHANGES\]\s*:?\s*\n?(.+?)(?=\n\s*\[|$)", text, re.DOTALL)
-    if st:
+    # Try to extract stat changes first (from JSON anywhere in text)
+    json_match = re.search(r'\{[^}]*"(?:reputation|wealth|relationships|knowledge|health|morality)"[^}]*\}', text, re.IGNORECASE)
+    if json_match:
         try:
-            json_match = re.search(r'\{[^}]+\}', st.group(1))
-            if json_match:
-                s = re.sub(r':\s*\+', ': ', json_match.group(0))
-                result["stat_changes"] = json.loads(s)
+            s = re.sub(r':\s*\+', ': ', json_match.group(0))
+            result["stat_changes"] = json.loads(s)
         except (json.JSONDecodeError, ValueError):
             pass
 
-    # Fallback: if ending text is empty, use the raw AI text
+    # Try to extract title — tag format first
+    t = re.search(r"\[ENDING_TITLE\]\s*\n(.+?)(?:\n\n|\n\[)", text, re.DOTALL)
+    if not t:
+        t = re.search(r"\[ENDING_TITLE\]\s*:?\s*(.+?)(?:\n|$)", text)
+    # Try markdown bold title (e.g. **A Life Reborn**)
+    if not t:
+        t = re.match(r'\s*\*\*(.+?)\*\*', text)
+    if t:
+        title = t.group(1).strip().strip('*')
+        title = re.sub(r'\[.*?\].*', '', title).strip()
+        if title and len(title) < 80:
+            result["title"] = title
+
+    # Try to extract ending text — tag format
+    tx = re.search(r"\[ENDING_TEXT\]\s*:?\s*\n?(.+?)(?=\n\s*\[ROADS|$)", text, re.DOTALL)
+    if tx:
+        result["text"] = clean_ending_text(tx.group(1))
+
+    # Try to extract roads not taken — tag format or markdown header
+    rnt = re.search(r"(?:\[ROADS_NOT_TAKEN\]|\*\*Roads?\s*Not\s*Taken\*\*)\s*:?\s*\n?(.+?)(?=\n\s*\[STAT|\*\*Stat|$)", text, re.DOTALL | re.IGNORECASE)
+    if rnt:
+        result["roads_not_taken"] = clean_ending_text(rnt.group(1))
+
+    # Fallback: if ending text is empty, use the cleaned raw text
     if not result["text"] and text.strip():
-        fallback = re.sub(r'\[.*?\]', '', text)
-        fallback = re.sub(r'\{[^}]*\}', '', fallback)
-        fallback = fallback.strip()
+        fallback = clean_ending_text(text)
         if fallback:
-            # Try to split title from text if no tags were used at all
             paragraphs = fallback.split('\n\n')
+            # If first paragraph is short, it's likely the title
             if len(paragraphs) > 1 and len(paragraphs[0]) < 80:
-                result["title"] = paragraphs[0].strip().strip('*')
+                if result["title"] == "The End":
+                    result["title"] = paragraphs[0].strip()
                 result["text"] = '\n\n'.join(paragraphs[1:]).strip()
             else:
                 result["text"] = fallback
