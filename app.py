@@ -193,6 +193,15 @@ def call_ai(messages, system_prompt, provider, api_key):
 
 # ─── Response Parsing ───
 
+def clean_narration(text):
+    """Remove any leaked JSON, tags, or numbered choices from narration."""
+    text = re.sub(r'\{["\s]*\w+["\s]*:.*?\}', '', text)
+    text = re.sub(r'\[.*?\]', '', text)
+    # Remove numbered choices that leaked in (1. 2. 3. 4.)
+    text = re.sub(r'\n\s*\d+\.\s+.+', '', text)
+    return text.strip()
+
+
 def parse_scene(text):
     """Parse AI response into structured scene data."""
     result = {"location": "Unknown", "narration": "", "choices": [], "stat_changes": {}}
@@ -207,35 +216,43 @@ def parse_scene(text):
         if location:
             result["location"] = location
 
-    narr = re.search(r"\[NARRATION\]\s*\n(.+?)(?:\n\[CHOICES\])", text, re.DOTALL)
+    # Extract narration — try strict format first, then flexible
+    narr = re.search(r"\[NARRATION\]\s*\n(.+?)(?=\n\s*\[CHOICES\])", text, re.DOTALL)
     if not narr:
-        narr = re.search(r"\[NARRATION\]\s*:?\s*\n?(.+?)(?:\n\[|$)", text, re.DOTALL)
+        narr = re.search(r"\[NARRATION\]\s*:?\s*\n?(.+?)(?=\n\s*\[|\n\s*\d+\.)", text, re.DOTALL)
     if narr:
-        narration = narr.group(1).strip()
-        # Strip any leaked JSON stat blocks
-        narration = re.sub(r'\{["\s]*\w+["\s]*:.*?\}', '', narration).strip()
-        result["narration"] = narration
+        result["narration"] = clean_narration(narr.group(1).strip())
 
-    ch = re.search(r"\[CHOICES\]\s*\n(.+?)(?:\n\[|$)", text, re.DOTALL)
-    if not ch:
-        ch = re.search(r"\[CHOICES\]\s*:?\s*\n?(.+?)(?:\n\[|$)", text, re.DOTALL)
+    # Extract choices
+    ch = re.search(r"\[CHOICES\]\s*:?\s*\n?(.+?)(?=\n\s*\[|$)", text, re.DOTALL)
     if ch:
-        choices = re.findall(r"\d+\.\s*(.+?)(?:\n|$)", ch.group(1).strip())
+        choices = re.findall(r"\d+\.\s*(.+?)(?=\n\d+\.|\n\[|$)", ch.group(1).strip(), re.DOTALL)
         result["choices"] = [c.strip() for c in choices if c.strip()]
+    else:
+        # Try to find numbered choices anywhere in the text
+        all_choices = re.findall(r"(?:^|\n)\s*\d+\.\s*(.+?)(?=\n\s*\d+\.|\n\s*\[|$)", text, re.DOTALL)
+        if len(all_choices) >= 3:
+            result["choices"] = [c.strip() for c in all_choices if c.strip()]
 
-    st = re.search(r"\[STAT_CHANGES\]\s*\n(.+?)(?:\n\[|$)", text, re.DOTALL)
+    # Extract stat changes
+    st = re.search(r"\[STAT_CHANGES\]\s*:?\s*\n?(.+?)(?=\n\s*\[|$)", text, re.DOTALL)
     if st:
         try:
-            s = re.sub(r':\s*\+', ': ', st.group(1).strip())
-            result["stat_changes"] = json.loads(s)
+            json_match = re.search(r'\{[^}]+\}', st.group(1))
+            if json_match:
+                s = re.sub(r':\s*\+', ': ', json_match.group(0))
+                result["stat_changes"] = json.loads(s)
         except (json.JSONDecodeError, ValueError):
             pass
 
-    # Fallback: if narration is empty, use the raw text (strip tags and JSON)
+    # Fallback: if narration is empty, extract text before any numbered choices
     if not result["narration"] and text.strip():
+        # Strip all tags
         fallback = re.sub(r'\[.*?\]', '', text)
+        # Remove everything from the first numbered choice onward
+        fallback = re.split(r'\n\s*1\.', fallback)[0]
+        # Strip JSON blocks
         fallback = re.sub(r'\{[^}]*\}', '', fallback)
-        fallback = re.sub(r'\d+\.\s*.+', '', fallback)
         fallback = fallback.strip()
         if fallback:
             result["narration"] = fallback
