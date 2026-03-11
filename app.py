@@ -360,33 +360,56 @@ def parse_ending(text):
     """Parse ending response."""
     result = {"title": "The End", "text": "", "roads_not_taken": "", "stat_changes": {}}
 
+    # Try to extract title
     t = re.search(r"\[ENDING_TITLE\]\s*\n(.+?)(?:\n\n|\n\[)", text, re.DOTALL)
     if not t:
         t = re.search(r"\[ENDING_TITLE\]\s*:?\s*(.+?)(?:\n|$)", text)
     if t:
         title = t.group(1).strip().strip('*')
-        # Strip any leaked tags from the title
         title = re.sub(r'\[.*?\].*', '', title).strip()
         if title:
             result["title"] = title
 
-    tx = re.search(r"\[ENDING_TEXT\]\s*\n(.+?)(?:\n\[|$)", text, re.DOTALL)
+    # Try to extract ending text
+    tx = re.search(r"\[ENDING_TEXT\]\s*\n(.+?)(?=\n\s*\[|$)", text, re.DOTALL)
     if not tx:
-        tx = re.search(r"\[ENDING_TEXT\]\s*:?\s*(.+?)(?:\n\[|$)", text, re.DOTALL)
+        tx = re.search(r"\[ENDING_TEXT\]\s*:?\s*(.+?)(?=\n\s*\[|$)", text, re.DOTALL)
     if tx:
-        result["text"] = tx.group(1).strip()
+        ending_text = tx.group(1).strip()
+        # Clean leaked JSON and tags
+        ending_text = re.sub(r'\{["\s]*\w+["\s]*:.*?\}', '', ending_text)
+        ending_text = re.sub(r'\[.*?\]', '', ending_text)
+        result["text"] = ending_text.strip()
 
-    rnt = re.search(r"\[ROADS_NOT_TAKEN\]\s*\n(.+?)(?:\n\[|$)", text, re.DOTALL)
+    # Try to extract roads not taken
+    rnt = re.search(r"\[ROADS_NOT_TAKEN\]\s*:?\s*\n?(.+?)(?=\n\s*\[|$)", text, re.DOTALL)
     if rnt:
         result["roads_not_taken"] = rnt.group(1).strip()
 
-    st = re.search(r"\[STAT_CHANGES\]\s*\n(.+?)(?:\n\[|$)", text, re.DOTALL)
+    # Try to extract stat changes
+    st = re.search(r"\[STAT_CHANGES\]\s*:?\s*\n?(.+?)(?=\n\s*\[|$)", text, re.DOTALL)
     if st:
         try:
-            s = re.sub(r':\s*\+', ': ', st.group(1).strip())
-            result["stat_changes"] = json.loads(s)
+            json_match = re.search(r'\{[^}]+\}', st.group(1))
+            if json_match:
+                s = re.sub(r':\s*\+', ': ', json_match.group(0))
+                result["stat_changes"] = json.loads(s)
         except (json.JSONDecodeError, ValueError):
             pass
+
+    # Fallback: if ending text is empty, use the raw AI text
+    if not result["text"] and text.strip():
+        fallback = re.sub(r'\[.*?\]', '', text)
+        fallback = re.sub(r'\{[^}]*\}', '', fallback)
+        fallback = fallback.strip()
+        if fallback:
+            # Try to split title from text if no tags were used at all
+            paragraphs = fallback.split('\n\n')
+            if len(paragraphs) > 1 and len(paragraphs[0]) < 80:
+                result["title"] = paragraphs[0].strip().strip('*')
+                result["text"] = '\n\n'.join(paragraphs[1:]).strip()
+            else:
+                result["text"] = fallback
 
     return result
 
