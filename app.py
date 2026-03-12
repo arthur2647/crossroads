@@ -15,6 +15,7 @@ Otherwise, each player enters their own key in the browser.
 import os
 import json
 import re
+import random
 from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
@@ -28,6 +29,92 @@ GROQ_KEYS = [k for k in [
     os.environ.get("GROQ_API_KEY_2"),
 ] if k]
 SERVER_GROQ_KEY = GROQ_KEYS[0] if GROQ_KEYS else None
+
+
+# ─── Story Randomization ───
+
+OPENING_SCENARIOS = [
+    "The player witnesses something they shouldn't have — a secret exchange, a crime, or a hidden truth",
+    "The player receives an unexpected message from someone they haven't heard from in years",
+    "The player finds a mysterious object — a letter, a key, a phone with one contact",
+    "The player is stranded somewhere unfamiliar after a sudden change of plans",
+    "The player overhears a conversation that changes everything they thought they knew",
+    "The player arrives at a new job on their first day and immediately senses something is off",
+    "The player runs into someone from their past at the worst possible moment",
+    "The player discovers their neighbor/colleague has disappeared under strange circumstances",
+    "The player wakes up to find something in their possession that doesn't belong to them",
+    "The player is caught in the middle of a conflict between two people they care about",
+    "The player receives a once-in-a-lifetime opportunity but the catch is unclear",
+    "The player stumbles into an underground community or hidden world within their city",
+    "A stranger asks the player for help with something oddly specific and urgent",
+    "The player's routine day is interrupted by a natural disaster, protest, or citywide event",
+    "The player inherits something unexpected from a relative they barely knew",
+    "The player is mistaken for someone else and drawn into that person's life",
+    "The player finds a hidden room, passage, or space that shouldn't exist",
+    "The player's best friend confesses something that puts their friendship to the test",
+    "The player gets locked out/in somewhere and must figure out their next move",
+    "The player discovers a talent or ability they never knew they had",
+]
+
+NARRATIVE_TONES = [
+    "noir and atmospheric — shadows, secrets, morally grey characters",
+    "warm and hopeful — found family, unexpected kindness, second chances",
+    "tense and suspenseful — paranoia, time pressure, trust no one",
+    "whimsical and quirky — absurd coincidences, eccentric characters, humor",
+    "melancholic and introspective — loss, memory, bittersweet beauty",
+    "gritty and raw — street-level survival, hard choices, real consequences",
+    "romantic and passionate — chemistry, longing, complicated love",
+    "mysterious and eerie — things don't add up, uncanny details, secrets",
+    "adventurous and energetic — exploration, discovery, adrenaline",
+    "philosophical and thoughtful — big questions, moral dilemmas, meaning",
+]
+
+NPC_ARCHETYPES = [
+    "a charismatic stranger with an ulterior motive",
+    "a childhood friend who has changed dramatically",
+    "an elderly mentor figure with a dark secret",
+    "a rival who could also be an ally",
+    "a street vendor who knows everyone's business",
+    "a nervous newcomer who is clearly hiding something",
+    "a confident artist who lives by their own rules",
+    "a burnt-out professional questioning their life choices",
+    "a mischievous kid who is smarter than they let on",
+    "a quiet observer who notices everything",
+    "a loud, opinionated local who commands the room",
+    "a mysterious foreigner passing through town",
+    "an old flame who never got closure",
+    "a conspiracy theorist who might actually be right",
+    "a gentle healer — nurse, therapist, or herbalist — with their own wounds",
+]
+
+TIME_SETTINGS = [
+    "early morning, just before dawn — the city is waking up",
+    "golden hour, late afternoon — warm light bathes everything",
+    "a rainy evening — puddles reflect neon, umbrellas crowd the streets",
+    "deep night, past midnight — the city belongs to insomniacs and dreamers",
+    "a foggy morning — visibility is low, sounds are muffled",
+    "a hot midday — shade is precious, tempers run short",
+    "dusk, the magic hour — sky turns purple and orange",
+    "a snowy morning — everything is muted and still",
+    "a windy afternoon — papers fly, people hold their hats",
+    "a stormy night — thunder rumbles, power flickers",
+]
+
+
+def generate_story_seed():
+    """Generate a unique combination of random story elements."""
+    return {
+        "scenario": random.choice(OPENING_SCENARIOS),
+        "tone": random.choice(NARRATIVE_TONES),
+        "npc": random.choice(NPC_ARCHETYPES),
+        "time": random.choice(TIME_SETTINGS),
+        "theme_avoid": random.sample([
+            "business meetings", "job interviews", "office politics",
+            "investment decisions", "startup pitches", "corporate espionage",
+            "real estate deals", "stock trading", "networking events",
+        ], 3),
+    }
+
 
 SYSTEM_PROMPT = """You are the narrator of "Crossroads," an immersive text-based visual novel set in the modern real world. Your writing style is literary, vivid, and emotionally resonant — like a great novel come to life.
 
@@ -469,6 +556,7 @@ def generate():
 
     try:
         if action == "opening":
+            seed = generate_story_seed()
             location_instruction = f"The story is set in {location}. Ground all details — streets, landmarks, weather, culture, atmosphere — in this real location." if location else ""
             messages = [{
                 "role": "user",
@@ -476,10 +564,16 @@ def generate():
                     f"Generate the opening scene for a new game. The player's name is "
                     f"{player_name} and their chosen background is: {background}.\n\n"
                     f"{location_instruction}\n\n"
-                    f"Create an immersive, real-world opening that establishes their "
-                    f"situation, introduces at least one NPC, and presents 4 meaningful "
-                    f"first choices. Set it in a specific, vivid real-world location "
-                    f"within {location if location else 'a modern city'}."
+                    f"UNIQUE STORY SEED (you MUST use these elements):\n"
+                    f"- Opening hook: {seed['scenario']}\n"
+                    f"- Narrative tone: {seed['tone']}\n"
+                    f"- First NPC the player meets: {seed['npc']}\n"
+                    f"- Time and atmosphere: {seed['time']}\n"
+                    f"- DO NOT include these themes: {', '.join(seed['theme_avoid'])}\n\n"
+                    f"Create an immersive opening using the story seed above. "
+                    f"Set it in a specific, vivid real-world location "
+                    f"within {location if location else 'a modern city'}. "
+                    f"Make this opening COMPLETELY UNIQUE — no two games should start the same way."
                 ),
             }]
             raw = call_ai(messages, SYSTEM_PROMPT, provider, api_key)
@@ -516,6 +610,25 @@ def generate():
                     f"The story is set in {location}. Move the character to specific locations "
                     f"within and around this area. Always provide a SPECIFIC location name."
                 )
+            # Add random narrative spice to prevent repetitive patterns
+            scene_spice = random.choice([
+                "Introduce an unexpected twist or complication the player didn't see coming.",
+                "Have an existing character reveal something surprising about themselves.",
+                "Change the setting — move the action to a completely different location.",
+                "Introduce a moment of levity or humor amidst the drama.",
+                "Create a moral dilemma where no choice is clearly right.",
+                "Have the consequences of a past choice catch up with the player.",
+                "Introduce a new character who disrupts the current situation.",
+                "Create a moment of danger, urgency, or time pressure.",
+                "Show the player a side of a character they haven't seen before.",
+                "Present an opportunity that seems too good to be true.",
+                "Have two storylines or characters unexpectedly collide.",
+                "Create a quiet, emotional moment — reflection, confession, or vulnerability.",
+                "Introduce a mystery or question that demands investigation.",
+                "Force the player to choose between two people or loyalties.",
+                "Skip forward in time slightly — show consequences that have already unfolded.",
+            ])
+
             messages = [{
                 "role": "user",
                 "content": (
@@ -523,9 +636,10 @@ def generate():
                     f"{location_context}\n\n"
                     f"Current stats: {stats_str}\n\n"
                     f"Recent history:\n{history_summary}\n\n"
-                    f"Continue the story naturally from the last choice. Introduce new "
-                    f"developments, characters, or complications. The narrative should "
-                    f"feel like a natural progression with real consequences.\n\n{tension}"
+                    f"Continue the story naturally from the last choice. {scene_spice} "
+                    f"The narrative should feel like a natural progression with real consequences. "
+                    f"DO NOT repeat patterns from previous scenes — no more people 'appearing from "
+                    f"somewhere' or 'approaching the player'. Vary how scenes begin.\n\n{tension}"
                 ),
             }]
             raw = call_ai(messages, SYSTEM_PROMPT, provider, api_key)
